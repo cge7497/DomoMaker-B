@@ -8,6 +8,9 @@ const mongoose = require('mongoose');
 const expressHandlebars = require('express-handlebars');
 const helmet = require('helmet');
 const session = require('express-session');
+const RedisStore = require('connect-redis')(session);
+const redis = require('redis');
+const csrf = require('csurf');
 
 const router = require('./router.js');
 
@@ -20,6 +23,14 @@ mongoose.connect(dbURI, (err) => {
     throw err;
   }
 });
+
+const redisURL = process.env.REDISCLOUD_URL;
+
+const redisClient = redis.createClient({
+  legacyMode: true,
+  url: redisURL,
+});
+redisClient.connect().catch(console.error);
 
 const app = express();
 
@@ -36,10 +47,25 @@ app.use(cookieParser());
 
 app.use(session({
   key: 'sessionid',
+  store: new RedisStore({
+    client: redisClient,
+  }),
   secret: 'Domo Arigato',
   resave: 'true',
   saveUninitialized: true,
+  cookie: {
+    httpOnly: true,
+  },
 }));
+
+app.use(csrf());
+
+app.use((err, req, res, next) => {
+  if (err.code !== 'EBADCSRFTOKEN') return next(err);
+
+  console.log('Missing CSRF token!');
+  return false;
+});
 
 app.engine('handlebars', expressHandlebars.engine({ defaultLayout: '' }));
 
