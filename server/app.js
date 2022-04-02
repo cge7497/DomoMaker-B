@@ -24,7 +24,7 @@ mongoose.connect(dbURI, (err) => {
   }
 });
 
-const redisURL = process.env.REDISCLOUD_URL;
+const redisURL = process.env.REDISCLOUD_URL; //Finally squashed commits to remove url!
 
 const redisClient = redis.createClient({
   legacyMode: true,
